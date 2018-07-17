@@ -2,7 +2,7 @@
 
 Required resources are:
 -	Java runtime environment 1.8 (or greater)
--	MDETL is an Javn project which uses Epsilon framework, so it needs epsilon engine 1.3 (or greater)
+-	MDETL is a Java project which uses Epsilon framework, so it needs epsilon engine 1.3 (or greater)
     
 To run this project:
 -	Import MDETL project to the eclipse and open "ETLTD.java"
