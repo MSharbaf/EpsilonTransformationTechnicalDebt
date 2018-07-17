@@ -1,0 +1,81 @@
+rule EPackage2Package 
+	transform ep : In!EPackage
+	to p : Out!Package {
+	
+	p.Name = ep.name;
+	// p.Types ::= ep.eClassifiers;
+}
+
+@abstract
+rule EClass2Class
+	transform ec : In!EClass 
+	to c : Out!Class {
+	
+	// Replaces the second line of EPackage2Package
+	// to achieve exactly the same ordering as 
+	// the reference transformation
+	Out!Package.all.first().Types.add(c);
+	
+	c.Name = ec.name + "Impl";
+	
+	// Find the base class - if any - of the produced class
+	var baseClass = ec.getBaseClass();
+	if (baseClass.isDefined()) { 
+		c.BaseTypes.add(new Out!TypeReference(BaseName = baseClass.name + "Impl"));
+	}
+	c.BaseTypes.add(new Out!TypeReference(BaseName = ec.name));
+	
+}
+
+@abstract
+rule EClass2Interface
+	transform ec : In!EClass 
+	to i : Out!Class {
+
+	Out!Package.all.first().Types.add(i);
+	i.Name = ec.name;
+	i.IsInterface = true;
+	
+	for (superType in ec.eSuperTypes) {
+		i.BaseTypes.add(new Out!TypeReference(BaseName = superType.name));
+	}
+}
+
+@cached
+operation In!EClass getAllSuperTypes() {
+	return self.closure(c|c.eSuperTypes);
+}
+
+@cached
+operation In!EClass getAllFeatures() {
+	return self.eStructuralFeatures.includingAll(self.getAllSuperTypes().collect(c|c.eStructuralFeatures)).flatten();
+}
+
+@cached
+operation In!EClass getShadowedFeatures() {
+	return self.getAllFeatures().select(f|self.getAllFeatures().exists(f2|f2.Refines = f));
+}
+
+@cached
+operation In!EClass getOwnedFeatures() {
+	return self.getAllFeatures().excludingAll(self.getInheritedFeatures());
+}
+
+@cached
+operation In!EClass getInheritedFeatures() {
+	return self.closure(c|c.getBaseClass()).collect(c|c.getOwnedFeatures()).flatten();
+}
+
+@cached
+operation In!EClass getBaseClass() {
+	
+	var shadowedFeatures = self.getShadowedFeatures();
+	
+	for (ancestor in self.getAllSuperTypes()) {
+		if (not ancestor.getAllFeatures().excludingAll(ancestor.getShadowedFeatures()).
+				exists(f|shadowedFeatures.includes(f))) {
+			return ancestor;
+		}
+	}
+	
+}

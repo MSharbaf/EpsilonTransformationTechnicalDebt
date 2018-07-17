@@ -1,0 +1,51 @@
+import "RefinementsEcore2SimpleCodeDOM.etl";
+
+rule EClass2ClassB
+	transform ec : In!EClass 
+	to c : Out!Class extends EClass2Class {
+	
+	if (ec.getBaseClass().isUndefined()) {
+		c.BaseTypes.add(0, new Out!TypeReference(BaseName = "DBObject"));
+	}
+	
+	var ownedFeatures = ec.getOwnedFeatures();
+	
+	for (ownedFeature in ownedFeatures) {
+		
+		var getter = ownedFeature.createGetter(false);
+		c.Members.add(getter);
+		
+		// The feature that refines the current feature
+		var refiner = ownedFeatures.selectOne(sf|sf.Refines = ownedFeature);
+		if (refiner.isDefined()) { 
+			getter.BodyExpression = new Out!MethodInvokeExpression(MethodName = "get_" + refiner.name);
+			getter.BodyExpression.TargetObject = new Out!ThisReferenceExpression;
+		}
+		else { 
+			getter.BodyExpression = new Out!MethodInvokeExpression(MethodName = "resolve");
+			getter.BodyExpression.Arguments.addAll(Sequence{
+				new Out!ThisReferenceExpression,
+				new Out!StringLiteralExpression(Value=ownedFeature.name)
+			});
+		}
+		
+	}
+}
+
+rule EClass2InterfaceB
+	transform ec : In!EClass 
+	to i : Out!Class 
+	extends EClass2Interface {
+	
+	for (feature in ec.eStructuralFeatures) {
+		i.Members.add(feature.createGetter(true));
+	}
+}
+
+operation In!EStructuralFeature createGetter(isAbstract : Boolean) {
+	var getter = new Out!Method;
+	getter.Name = "get_" + self.name;
+	getter.IsAbstract = isAbstract;
+	getter.ReturnType = new Out!TypeReference(BaseName = self.eType.name);
+	return getter;
+}

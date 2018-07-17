@@ -1,0 +1,69 @@
+import "RefinementsEcore2SimpleCodeDOM.etl";
+
+rule EClass2ClassA
+	transform ec : In!EClass 
+	to c : Out!Class extends EClass2Class {
+	
+	var ownedFeatures = ec.getOwnedFeatures();
+	
+	for (ownedFeature in ownedFeatures) {
+		
+		// The property for the feature
+		var property = new Out!Property;
+		property.Name = ownedFeature.name;
+		c.Members.add(property);
+		
+		var fieldFeature; // The field that stores the current feature
+		var fieldFeatureName; // The name we will use for the field
+		
+		// The feature that refines the current feature
+		var refiner = ownedFeatures.selectOne(sf|sf.Refines = ownedFeature);
+		if (refiner.isDefined()) { 
+			fieldFeature = refiner; 
+		}
+		else { 
+			fieldFeature = ownedFeature;
+			// If the feature is not refined, we create a field for it
+			var field = new Out!Field;
+			field.Name = "_" + fieldFeature.name;
+			field.FieldType = new Out!TypeReference(BaseName = fieldFeature.eType.name);
+			c.Members.add(field);
+		}
+		
+		// If the feature is refined, prepend a _ to the field reference name
+		fieldFeatureName = fieldFeature.name;
+		if (fieldFeature == ownedFeature) fieldFeatureName = "_" + fieldFeatureName;
+		
+		// Create the getter of the property
+		var getter = new Out!FieldReferenceExpression;
+		getter.FieldName = fieldFeatureName;
+		
+		property.Getter = getter;
+		getter.TargetObject = new Out!ThisReferenceExpression;
+		property.PropertyType = new Out!TypeReference(BaseName = fieldFeature.eType.name);
+		
+		// Create the setter of the property
+		var setter = new Out!BinaryExpression;
+		setter.Operator = Out!BinaryOperator#Assign;
+		property.Setter = setter;
+		setter.RightOperand = new Out!SetValueExpression;
+		setter.LeftOperand = new Out!FieldReferenceExpression;
+		setter.LeftOperand.FieldName = fieldFeatureName;
+		setter.LeftOperand.TargetObject = new Out!ThisReferenceExpression;
+		
+	}
+}
+
+rule EClass2InterfaceA
+	transform ec : In!EClass 
+	to i : Out!Class 
+	extends EClass2Interface {
+	
+	for (feature in ec.eStructuralFeatures) {
+		var property = new Out!Property;
+		property.IsAbstract = true;
+		property.Name = feature.name;
+		property.PropertyType = new Out!TypeReference(BaseName = feature.eType.name);
+		i.Members.add(property);
+	}
+}

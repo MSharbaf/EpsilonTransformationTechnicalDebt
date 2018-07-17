@@ -1,0 +1,10 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: MDETL
+Bundle-SymbolicName: MDETL
+Bundle-Version: 1.0.0.qualifier
+Export-Package: etl,
+ models
+Require-Bundle: org.eclipse.epsilon.emc.emf;bundle-version="1.4.0",
+ org.eclipse.epsilon.etl.engine;bundle-version="1.4.0",
+ org.eclipse.epsilon.eol.engine;bundle-version="1.4.0"
